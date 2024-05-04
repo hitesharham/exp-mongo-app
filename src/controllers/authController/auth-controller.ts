@@ -3,7 +3,7 @@ import User from "../../models/user.model";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 export const signUp = async (req: Request, res: Response) => {
-  const { email, username, password } = req.body;
+  const { email, username, password, isActive } = req.body;
   try {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -38,6 +38,7 @@ export const signUp = async (req: Request, res: Response) => {
       email,
       username,
       password: hashedPassword,
+      isActive: true,
     });
 
     await newUser.save();
@@ -50,14 +51,24 @@ export const signUp = async (req: Request, res: Response) => {
 };
 
 export const logIn = async (req: Request, res: Response) => {
-  const { email, password } = req.body;
+  const { username, email, password } = req.body;
 
   try {
-    // Find user by email
-    const user = await User.findOne({ email });
+    let user;
+    if (username || email) {
+      // user can login using username or email with password.
+      user = username
+        ? await User.findOne({ username })
+        : await User.findOne({ email });
+    }
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
+    }
+
+    // user inactive
+    if (user && !user.isActive) {
+      return res.status(404).json({ message: "User is inactive" });
     }
 
     // Compare passwords
