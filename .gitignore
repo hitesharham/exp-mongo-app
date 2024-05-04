@@ -1,3 +1,4 @@
 # igone to commit this file
 .env
-node_modules
+node_modules/
+dist/
