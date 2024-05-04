@@ -8,7 +8,9 @@ export const signUp = async (req: Request, res: Response) => {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return res.status(400).json({ message: "Invalid email format" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid email format" });
     }
 
     // Validate password strength
@@ -17,6 +19,7 @@ export const signUp = async (req: Request, res: Response) => {
       /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[^a-zA-Z0-9])(?=.*[\S]).{8,}$/;
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
+        success: false,
         message:
           "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character",
       });
@@ -27,7 +30,7 @@ export const signUp = async (req: Request, res: Response) => {
     if (existingUser) {
       return res
         .status(400)
-        .json({ message: "Email or username already exists" });
+        .json({ success: false, message: "Email or username already exists" });
     }
 
     // Hash password
@@ -43,13 +46,24 @@ export const signUp = async (req: Request, res: Response) => {
 
     await newUser.save();
 
-    return res.status(201).json({ message: "User created successfully" });
+    return res
+      .status(201)
+      .json({ success: true, message: "User created successfully" });
   } catch (error) {
     console.error("Error in sign up:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
+/**
+ * User can login with username and password || email and password
+ * User must be activated for login
+ * @param req
+ * @param res
+ * @returns
+ */
 export const logIn = async (req: Request, res: Response) => {
   const { username, email, password } = req.body;
 
@@ -63,12 +77,16 @@ export const logIn = async (req: Request, res: Response) => {
     }
 
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
     // user inactive
     if (user && !user.isActive) {
-      return res.status(404).json({ message: "User is inactive" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User is inactive" });
     }
 
     // Compare passwords
@@ -80,13 +98,15 @@ export const logIn = async (req: Request, res: Response) => {
 
     // Generate JWT token
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET!, {
-      expiresIn: "1h",
+      expiresIn: "24h",
     });
 
-    return res.status(200).json({ token });
+    return res.status(200).json({ success: true, token: token });
   } catch (error) {
     console.error("Error in log in:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -94,18 +114,22 @@ const revokedTokens: Set<string> = new Set();
 
 export const logOut = async (req: Request, res: Response) => {
   try {
-    // You can optionally perform additional actions here, such as logging the user out of other services or clearing any session data.
-    // For a simple JWT-based authentication system, simply returning a success message is sufficient.
     const token = req.headers.authorization?.split(" ")[1];
 
     if (!token) {
-      return res.status(401).json({ message: "No token provided" });
+      return res
+        .status(401)
+        .json({ success: false, message: "No token provided" });
     }
 
     revokedTokens.add(token);
-    return res.status(200).json({ message: "Logged out successfully" });
+    return res
+      .status(200)
+      .json({ success: true, message: "Logged out successfully" });
   } catch (error) {
     console.error("Error in log out:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
